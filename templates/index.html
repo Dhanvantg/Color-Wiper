@@ -1,0 +1,313 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Upload Documents</h5>
+                <div class="mb-3">
+                    <label for="batchName" class="form-label">Batch Name</label>
+                    <input type="text" class="form-control" id="batchName" placeholder="Enter a name for this batch">
+                </div>
+                <div class="drop-zone" id="dropZone">
+                    <i class="fas fa-cloud-upload-alt fa-3x mb-3"></i>
+                    <p>Drag and drop your PDFs or images here</p>
+                    <p class="text-muted">or</p>
+                    <input type="file" id="fileInput" class="d-none" accept=".pdf,.png,.jpg,.jpeg" multiple>
+                    <button class="btn btn-primary" onclick="document.getElementById('fileInput').click()">
+                        Choose Files
+                    </button>
+                </div>
+                <div class="mt-3">
+                    <small class="text-muted">Supported formats: PDF, PNG, JPG, JPEG</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="card-title mb-0">Processed Images</h5>
+                    <button id="downloadPdfBtn" class="btn btn-success d-none">
+                        <i class="fas fa-file-pdf me-2"></i>Download as PDF
+                    </button>
+                </div>
+                <div id="imagesContainer" class="row g-3">
+                    <!-- Images will be displayed here -->
+                </div>
+                <div id="noImagesMessage" class="text-center text-muted">
+                    <p>Process images to see the results</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Spot Fixing Modal -->
+<div class="modal fade" id="spotFixModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Fix Spots</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="spot-fix-container">
+                    <img id="spotFixImage" src="" alt="Image for spot fixing" class="img-fluid">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" id="applySpotFix">Apply Fix</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let currentSession = null;
+let currentSpotFixImage = null;
+
+// Initialize the application
+$(document).ready(function() {
+    setupDropZone();
+});
+
+function setupDropZone() {
+    const dropZone = document.getElementById('dropZone');
+    const fileInput = document.getElementById('fileInput');
+
+    dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.classList.add('dragover');
+    });
+
+    dropZone.addEventListener('dragleave', () => {
+        dropZone.classList.remove('dragover');
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('dragover');
+        const files = e.dataTransfer.files;
+        handleFiles(files);
+    });
+
+    fileInput.addEventListener('change', (e) => {
+        const files = e.target.files;
+        handleFiles(files);
+    });
+}
+
+function handleFiles(files) {
+    if (!files.length) return;
+
+    // Set batch name based on first file
+    const firstFile = files[0];
+    const batchNameInput = document.getElementById('batchName');
+    if (!batchNameInput.value) {
+        const fileName = firstFile.name;
+        const baseName = fileName.substring(0, fileName.lastIndexOf('.'));
+        batchNameInput.value = baseName;
+    }
+
+    const formData = new FormData();
+    formData.append('batch_name', batchNameInput.value);
+    for (let i = 0; i < files.length; i++) {
+        formData.append('files[]', files[i]);
+    }
+
+    $('.loading-overlay').css('display', 'flex');
+    $('.loading-spinner span').text('Uploading files...');
+
+    $.ajax({
+        url: '/upload',
+        type: 'POST',
+        data: formData,
+        processData: false,
+        contentType: false,
+        success: function(response) {
+            currentSession = response.session_id;
+            $('.loading-spinner span').text(`Processing files (${response.processed_count}/${response.total_files})...`);
+            displayProcessedImages(response.files);
+        },
+        error: function(xhr) {
+            alert('Error uploading files: ' + xhr.responseJSON.error);
+            $('.loading-overlay').hide();
+        }
+    });
+}
+
+function displayProcessedImages(files) {
+    const container = $('#imagesContainer');
+    container.empty();
+    
+    files.forEach((file, index) => {
+        const col = $('<div class="col-md-6 col-lg-4">');
+        const card = $('<div class="card h-100">');
+        const cardBody = $('<div class="card-body">');
+        
+        // Create image comparison container
+        const comparison = $('<div class="image-comparison">');
+        const originalImg = $(`<img src="/file/${currentSession}/${file.original}" alt="Original">`);
+        const processedImg = $(`<img src="/file/${currentSession}/${file.processed}" alt="Processed">`);
+        const slider = $('<div class="comparison-slider">');
+        
+        comparison.append(originalImg, processedImg, slider);
+        
+        // Add file name
+        const fileName = $('<p class="card-text text-center mt-2">').text(file.name);
+        
+        // Add action buttons
+        const buttonGroup = $('<div class="btn-group w-100 mt-2">');
+        
+        const rotateBtn = $(`
+            <button class="btn btn-outline-primary">
+                <i class="fas fa-redo me-2"></i>Rotate
+            </button>
+        `).click(() => rotateImage(file.processed));
+        
+        const spotFixBtn = $(`
+            <button class="btn btn-outline-primary">
+                <i class="fas fa-magic me-2"></i>Fix Spots
+            </button>
+        `).click(() => openSpotFixModal(file.processed));
+        
+        const downloadBtn = $(`
+            <button class="btn btn-outline-primary">
+                <i class="fas fa-download me-2"></i>Download
+            </button>
+        `).click(() => {
+            const link = document.createElement('a');
+            link.download = 'processed_' + file.name;
+            link.href = `/file/${currentSession}/${file.processed}`;
+            link.click();
+        });
+        
+        buttonGroup.append(rotateBtn, spotFixBtn, downloadBtn);
+        
+        cardBody.append(comparison, fileName, buttonGroup);
+        card.append(cardBody);
+        col.append(card);
+        container.append(col);
+        
+        // Setup comparison slider for this image
+        setupComparisonSlider(comparison[0], processedImg[0], slider[0]);
+        
+        // Update progress
+        $('.loading-spinner span').text(`Processing image ${index + 1} of ${files.length}...`);
+    });
+    
+    $('#noImagesMessage').addClass('d-none');
+    $('#downloadPdfBtn').removeClass('d-none');
+    $('.loading-overlay').hide();
+}
+
+function setupComparisonSlider(container, processedImage, slider) {
+    let isDown = false;
+    
+    slider.addEventListener('mousedown', () => {
+        isDown = true;
+    });
+    
+    window.addEventListener('mouseup', () => {
+        isDown = false;
+    });
+    
+    window.addEventListener('mousemove', (e) => {
+        if (!isDown) return;
+        
+        const rect = container.getBoundingClientRect();
+        const y = e.clientY - rect.top;
+        const percent = (y / rect.height) * 100;
+        
+        if (percent >= 0 && percent <= 100) {
+            slider.style.top = `${percent}%`;
+            processedImage.style.clipPath = `inset(${percent}% 0 0 0)`;
+        }
+    });
+}
+
+function rotateImage(filename) {
+    $('.loading-overlay').css('display', 'flex');
+    $('.loading-spinner span').text('Rotating image...');
+    
+    $.ajax({
+        url: `/rotate_image/${currentSession}/${filename}`,
+        type: 'POST',
+        success: function(response) {
+            // Force refresh both original and processed images
+            const timestamp = Date.now();
+            const originalFilename = filename.replace('processed_', 'original_');
+            
+            // Refresh both images in the comparison view
+            $(`img[src="/file/${currentSession}/${filename}"]`).each(function() {
+                const img = $(this);
+                const currentSrc = img.attr('src').split('?')[0];
+                img.attr('src', `${currentSrc}?t=${timestamp}`);
+            });
+            
+            $(`img[src="/file/${currentSession}/${originalFilename}"]`).each(function() {
+                const img = $(this);
+                const currentSrc = img.attr('src').split('?')[0];
+                img.attr('src', `${currentSrc}?t=${timestamp}`);
+            });
+            
+            // Also refresh the spot fix modal image if it's open
+            const spotFixImage = $('#spotFixImage');
+            if (spotFixImage.length && spotFixImage.attr('src').includes(filename)) {
+                const currentSrc = spotFixImage.attr('src').split('?')[0];
+                spotFixImage.attr('src', `${currentSrc}?t=${timestamp}`);
+            }
+            
+            $('.loading-overlay').hide();
+        },
+        error: function(xhr) {
+            alert('Error rotating image: ' + xhr.responseJSON.error);
+            $('.loading-overlay').hide();
+        }
+    });
+}
+
+function openSpotFixModal(filename) {
+    currentSpotFixImage = filename;
+    const modal = new bootstrap.Modal(document.getElementById('spotFixModal'));
+    $('#spotFixImage').attr('src', `/file/${currentSession}/${filename}`);
+    modal.show();
+}
+
+$('#applySpotFix').click(function() {
+    if (!currentSpotFixImage) return;
+    
+    $('.loading-overlay').css('display', 'flex');
+    
+    $.ajax({
+        url: `/fix_spots/${currentSession}/${currentSpotFixImage}`,
+        type: 'POST',
+        success: function() {
+            // Refresh the image
+            $(`img[src="/file/${currentSession}/${currentSpotFixImage}"]`).attr('src', `/file/${currentSession}/${currentSpotFixImage}?t=${Date.now()}`);
+            $('#spotFixModal').modal('hide');
+            $('.loading-overlay').hide();
+        },
+        error: function(xhr) {
+            alert('Error fixing spots: ' + xhr.responseJSON.error);
+            $('.loading-overlay').hide();
+        }
+    });
+});
+
+// Add PDF download functionality
+$('#downloadPdfBtn').click(function() {
+    const batchName = $('#batchName').val() || 'processed_images';
+    window.location.href = `/download_pdf/${currentSession}?name=${encodeURIComponent(batchName)}`;
+});
+</script>
+{% endblock %} 

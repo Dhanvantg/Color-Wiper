@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Red Ink Remover</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .drop-zone {
+            border: 2px dashed #ccc;
+            border-radius: 8px;
+            padding: 2rem;
+            text-align: center;
+            cursor: pointer;
+            transition: border-color 0.3s ease;
+        }
+        .drop-zone:hover {
+            border-color: #0d6efd;
+        }
+        .drop-zone.dragover {
+            border-color: #0d6efd;
+            background-color: rgba(13, 110, 253, 0.1);
+        }
+        .image-comparison {
+            position: relative;
+            width: 100%;
+            height: 300px;
+            overflow: hidden;
+            border-radius: 4px;
+        }
+        .image-comparison img {
+            position: absolute;
+            top: 50;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+        .image-comparison .comparison-slider {
+            position: absolute;
+            top: 50%;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: #fff;
+            box-shadow: 0 0 4px rgba(0,0,0,0.5);
+            cursor: ns-resize;
+        }
+        .image-comparison .comparison-slider::before {
+            content: '';
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 16px;
+            height: 16px;
+            background: #fff;
+            border-radius: 50%;
+            box-shadow: 0 0 4px rgba(0,0,0,0.5);
+        }
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.7);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .loading-spinner {
+            color: white;
+            font-size: 2rem;
+        }
+        .card {
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .card-body {
+            padding: 1rem;
+        }
+        .btn-sm {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.875rem;
+        }
+        .spot-fix-container {
+            max-height: 80vh;
+            overflow: auto;
+            text-align: center;
+        }
+        .spot-fix-container img {
+            max-width: 100%;
+            height: auto;
+        }
+        .btn-group {
+            gap: 0.25rem;
+        }
+        .btn-group .btn {
+            flex: 1;
+        }
+        .modal-xl {
+            max-width: 90vw;
+        }
+        .modal-body {
+            padding: 0;
+            background: #f8f9fa;
+        }
+        .image-comparison {
+            position: relative;
+            width: 100%;
+            height: 300px;
+            overflow: hidden;
+            border-radius: 4px;
+            background: #f8f9fa;
+        }
+        .image-comparison img {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            background: #fff;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-eraser me-2"></i>
+                Red Ink Remover
+            </a>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        {% block content %}{% endblock %}
+    </div>
+
+    <div class="loading-overlay">
+        <div class="loading-spinner">
+            <i class="fas fa-spinner fa-spin"></i>
+            <span class="ms-2">Processing...</span>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html> 

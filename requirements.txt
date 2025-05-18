@@ -1,0 +1,8 @@
+flask==3.0.2
+werkzeug==3.0.1
+pdf2image==1.17.0
+Pillow==10.2.0
+numpy==1.26.4
+opencv-python==4.9.0.80
+scikit-learn>=1.0.0
+reportlab==4.1.0 
