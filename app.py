@@ -1,14 +1,12 @@
 from flask import Flask, render_template, request, jsonify, send_file
 import os
 from werkzeug.utils import secure_filename
-from eraser import process_pdf, process_image, visualize_red_regions, convert_pdf_to_images
+from eraser import process_image, visualize_red_regions, convert_pdf_to_images
 import uuid
 import shutil
 from PIL import Image
 import io
 from reportlab.pdfgen import canvas
-from reportlab.lib.pagesizes import letter, A4
-from reportlab.lib.units import inch
 import numpy as np
 import cv2
 from datetime import datetime, timedelta
