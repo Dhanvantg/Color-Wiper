@@ -1,7 +1,7 @@
 Flask==2.0.1
-Pillow==9.5.0 --only-binary :all:
-numpy==1.24.3 --only-binary :all:
-opencv-python-headless==4.8.0.74 --only-binary :all:
-pdf2image==1.16.3
+Pillow==10.2.0 --only-binary :all:
+numpy==1.26.4 --only-binary :all:
+opencv-python-headless==4.9.0.80 --only-binary :all:
+pdf2image==1.17.0
 reportlab==4.0.4
 Werkzeug==2.0.1 
